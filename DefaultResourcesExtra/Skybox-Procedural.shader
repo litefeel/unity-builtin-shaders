@@ -26,7 +26,7 @@ SubShader {
         #include "UnityCG.cginc"
         #include "Lighting.cginc"
 
-        #pragma multi_compile _SUNDISK_NONE _SUNDISK_SIMPLE _SUNDISK_HIGH_QUALITY
+        #pragma multi_compile_local _SUNDISK_NONE _SUNDISK_SIMPLE _SUNDISK_HIGH_QUALITY
 
         uniform half _Exposure;     // HDR exposure
         uniform half3 _GroundColor;
@@ -166,13 +166,7 @@ SubShader {
         float scale(float inCos)
         {
             float x = 1.0 - inCos;
-        #if defined(SHADER_API_N3DS)
-            // The polynomial expansion here generates too many swizzle instructions for the 3DS vertex assembler
-            // Approximate by removing x^1 and x^2
-            return 0.25 * exp(-0.00287 + x*x*x*(-6.80 + x*5.25));
-        #else
             return 0.25 * exp(-0.00287 + x*(0.459 + x*(3.83 + x*(-6.80 + x*5.25))));
-        #endif
         }
 
         v2f vert (appdata_t v)
@@ -296,7 +290,7 @@ SubShader {
             }
 
         #if SKYBOX_SUNDISK == SKYBOX_SUNDISK_HQ
-            OUT.vertex          = -v.vertex;
+            OUT.vertex          = -eyeRay;
         #elif SKYBOX_SUNDISK == SKYBOX_SUNDISK_SIMPLE
             OUT.rayDir          = half3(-eyeRay);
         #else
@@ -370,7 +364,7 @@ SubShader {
         // if y >= 0 and < 1 [eyeRay.y <= 0 and > -SKY_GROUND_THRESHOLD] - horizon
         // if y < 0 [eyeRay.y > 0] - sky
         #if SKYBOX_SUNDISK == SKYBOX_SUNDISK_HQ
-            half3 ray = normalize(mul((float3x3)unity_ObjectToWorld, IN.vertex));
+            half3 ray = normalize(IN.vertex.xyz);
             half y = ray.y / SKY_GROUND_THRESHOLD;
         #elif SKYBOX_SUNDISK == SKYBOX_SUNDISK_SIMPLE
             half3 ray = IN.rayDir.xyz;

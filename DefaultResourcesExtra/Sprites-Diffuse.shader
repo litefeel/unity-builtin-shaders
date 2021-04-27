@@ -31,7 +31,7 @@ Shader "Sprites/Diffuse"
 
         CGPROGRAM
         #pragma surface surf Lambert vertex:vert nofog nolightmap nodynlightmap keepalpha noinstancing
-        #pragma multi_compile _ PIXELSNAP_ON
+        #pragma multi_compile_local _ PIXELSNAP_ON
         #pragma multi_compile _ ETC1_EXTERNAL_ALPHA
         #include "UnitySprites.cginc"
 
@@ -43,7 +43,7 @@ Shader "Sprites/Diffuse"
 
         void vert (inout appdata_full v, out Input o)
         {
-            v.vertex.xy *= _Flip.xy;
+            v.vertex = UnityFlipSprite(v.vertex, _Flip);
 
             #if defined(PIXELSNAP_ON)
             v.vertex = UnityPixelSnap (v.vertex);

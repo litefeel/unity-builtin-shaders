@@ -57,8 +57,8 @@ Shader "UI/DefaultETC1"
             #include "UnityCG.cginc"
             #include "UnityUI.cginc"
 
-            #pragma multi_compile __ UNITY_UI_CLIP_RECT
-            #pragma multi_compile __ UNITY_UI_ALPHACLIP
+            #pragma multi_compile_local _ UNITY_UI_CLIP_RECT
+            #pragma multi_compile_local _ UNITY_UI_ALPHACLIP
 
             struct appdata_t
             {
@@ -73,37 +73,49 @@ Shader "UI/DefaultETC1"
                 fixed4 color    : COLOR;
                 float2 texcoord  : TEXCOORD0;
                 float4 worldPosition : TEXCOORD1;
+                half4  mask : TEXCOORD2;
             };
 
+            sampler2D _MainTex;
             fixed4 _Color;
             fixed4 _TextureSampleAdd;
             float4 _ClipRect;
+            float4 _MainTex_ST;
+            float _UIMaskSoftnessX;
+            float _UIMaskSoftnessY;
 
             v2f vert(appdata_t IN)
             {
                 v2f OUT;
+                float4 vPosition = UnityObjectToClipPos(IN.vertex);
                 OUT.worldPosition = IN.vertex;
-                OUT.vertex = UnityObjectToClipPos(OUT.worldPosition);
-
-                OUT.texcoord = IN.texcoord;
+                OUT.vertex = vPosition;
 
                 #ifdef UNITY_HALF_TEXEL_OFFSET
                 OUT.vertex.xy += (_ScreenParams.zw-1.0) * float2(-1,1) * OUT.vertex.w;
                 #endif
 
+                float2 pixelSize = vPosition.w;
+                pixelSize /= float2(1, 1) * abs(mul((float2x2)UNITY_MATRIX_P, _ScreenParams.xy));
+
+                float4 clampedRect = clamp(_ClipRect, -2e10, 2e10);
+                float2 maskUV = (IN.vertex.xy - clampedRect.xy) / (clampedRect.zw - clampedRect.xy);
+                OUT.texcoord = TRANSFORM_TEX(IN.texcoord.xy, _MainTex);
+                OUT.mask = half4(IN.vertex.xy * 2 - clampedRect.xy - clampedRect.zw, 0.25 / (0.25 * half2(_UIMaskSoftnessX, _UIMaskSoftnessY) + abs(pixelSize.xy)));
+
                 OUT.color = IN.color * _Color;
                 return OUT;
             }
 
-            sampler2D _MainTex;
             sampler2D _AlphaTex;
 
             fixed4 frag(v2f IN) : SV_Target
             {
-                fixed4 color = UnityGetUIDiffuseColor(IN.texcoord, _MainTex, _AlphaTex, _TextureSampleAdd) * IN.color;
+                fixed4 color = IN.color * UnityGetUIDiffuseColor(IN.texcoord, _MainTex, _AlphaTex, _TextureSampleAdd);
 
                 #ifdef UNITY_UI_CLIP_RECT
-                color.a *= UnityGet2DClipping(IN.worldPosition.xy, _ClipRect);
+                    half2 m = saturate((_ClipRect.zw - _ClipRect.xy - abs(IN.mask.xy)) * IN.mask.zw);
+                    color.a *= m.x * m.y;
                 #endif
 
                 #ifdef UNITY_UI_ALPHACLIP

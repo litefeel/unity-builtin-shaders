@@ -56,10 +56,8 @@ Shader "Hidden/Internal-GUITextureClipText"
     ENDCG
 
     SubShader {
-        Tags { "ForceSupported" = "True" }
-
         Lighting Off
-        Blend SrcAlpha OneMinusSrcAlpha, One One
+        Blend SrcAlpha OneMinusSrcAlpha, One OneMinusSrcAlpha
         Cull Off
         ZWrite Off
         ZTest Always
@@ -71,8 +69,6 @@ Shader "Hidden/Internal-GUITextureClipText"
     }
 
     SubShader {
-        Tags { "ForceSupported" = "True" }
-
         Lighting Off
         Blend SrcAlpha OneMinusSrcAlpha
         Cull Off
